@@ -1,10 +1,8 @@
-require 'RedCloth'
-require 'white_list_helper'
+require 'content_formatter'
 
-ActiveRecord::Base.class_eval do
-  include ActionView::Helpers::TagHelper, ActionView::Helpers::TextHelper, ActionView::Helpers::UrlHelper, WhiteListHelper
+module WhiteListFormattedContent #:nodoc:
   def self.format_attribute(attr_name)
-    class << self; include ActionView::Helpers::TagHelper, ActionView::Helpers::TextHelper, ActionView::Helpers::UrlHelper, WhiteListHelper; end
+    class << self; ; end
     define_method(:body)       { read_attribute attr_name }
     define_method(:body_html)  { read_attribute "#{attr_name}_html" }
     define_method(:body_html=) { |value| write_attribute "#{attr_name}_html", value }
@@ -16,15 +14,8 @@ ActiveRecord::Base.class_eval do
   end
 
   protected
-    def format_content
-      body.strip! if body.respond_to?(:strip!)
-      self.body_html = body.blank? ? '' : body_html_with_formatting
-    end
-    
-    def body_html_with_formatting
-      body_html = auto_link(body) { |text| truncate(text, :length => 50) }
-      textilized = RedCloth.new(body_html, [ :hard_breaks ])
-      textilized.hard_breaks = true if textilized.respond_to?("hard_breaks=")
-      white_list(textilized.to_html)
-    end
+
+  def format_content
+    self.body_html = ContentFormatter.format_content(body)
+  end
 end
